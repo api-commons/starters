@@ -1,0 +1,63 @@
+# API Commons — Starter JSON Schema
+#
+# The smallest JSON Schema worth copying: an object, typed properties, one
+# constraint, one required field, and descriptions on everything.
+#
+# Written against JSON Schema 2020-12, the dialect OpenAPI 3.1 uses — so a
+# schema written this way drops straight into an OpenAPI `components.schemas`
+# with no translation.
+#
+# https://json-schema.org/draft/2020-12/schema
+
+"$id": https://example.com/person.schema.yml
+"$schema": https://json-schema.org/draft/2020-12/schema
+
+title: Person
+description: >-
+  A person. Replace this with your own object, but keep the shape — a title, a
+  description, an explicit type, and a description on every property.
+type: object
+
+required:
+  - firstName
+
+properties:
+
+  firstName:
+    type: string
+    description: The person's first name.
+    minLength: 1
+    examples:
+      - Ada
+
+  lastName:
+    type: string
+    description: >-
+      The person's last name. Optional on purpose — plenty of people do not have
+      one, and a schema that requires it is wrong about the world rather than
+      strict.
+    examples:
+      - Lovelace
+
+  age:
+    type: integer
+    description: Age in years, which must be zero or greater.
+    minimum: 0
+    examples:
+      - 36
+
+  email:
+    type: string
+    format: email
+    description: >-
+      Contact address. `format` is an annotation by default in 2020-12 — most
+      validators will not enforce it unless you turn assertion on, so validate
+      it yourself if it matters.
+    examples:
+      - ada@example.com
+
+# Left unset deliberately. Setting `additionalProperties: false` here would make
+# every future field a breaking change for anyone validating against this
+# schema. Decide that on purpose, not by habit.
+#
+# additionalProperties: false

@@ -1,0 +1,283 @@
+# API Commons — Starter OpenAPI
+#
+# The smallest OpenAPI 3.1 document that is complete enough to be useful: one
+# resource, a list and a create, a read by id, and an error. Copy it, rename
+# everything, and grow it.
+#
+# This is a STARTER, not a base. It is deliberately minimal — if you want a
+# fuller template with the whole RFC 9457 error contract, pagination, conditional
+# writes and merge-patch already wired in, start from one of the bases instead:
+#
+#   https://github.com/api-commons/accounts
+#   https://github.com/api-commons/images
+#   https://github.com/api-commons/videos
+#
+# This file lints CLEAN under `spectral:oas` and under the API Commons Problem
+# Details ruleset. That is the point of a starter: whatever you build on top of
+# it starts from zero findings, so the first warning you ever see is one you
+# introduced.
+#
+# What to change first: `servers`, `info`, the `Things` tag, and the `Thing`
+# schema. Everything else is structure worth keeping.
+#
+# See README.md for what each starter is and how they are validated.
+
+openapi: 3.1.0
+
+info:
+  title: Example API
+  summary: A starter OpenAPI you copy and edit.
+  description: |-
+    Replace this with a description of what your API does and who it is for.
+
+    The first paragraph is what most documentation tools show in a listing, so
+    make it a sentence someone can act on rather than a restatement of the title.
+  version: 1.0.0
+  contact:
+    name: Example
+    url: https://example.com/support
+    email: support@example.com
+  license:
+    name: Apache-2.0
+    identifier: Apache-2.0
+
+externalDocs:
+  description: Documentation
+  url: https://example.com/docs
+
+servers:
+  - url: https://api.example.com
+    description: Production
+
+tags:
+  - name: Things
+    description: The resource this API is about. Rename it.
+
+security:
+  - bearerAuth: []
+
+paths:
+
+  /things:
+
+    get:
+      summary: List things
+      description: Return a page of things, newest first.
+      operationId: listThings
+      tags: [Things]
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of results to return.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+      responses:
+        '200':
+          description: A page of things.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Thing'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/Problem'
+
+    post:
+      summary: Create a thing
+      description: Create a new thing and return it.
+      operationId: createThing
+      tags: [Things]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ThingCreate'
+      responses:
+        '201':
+          description: The thing was created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Thing'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/Problem'
+
+  /things/{thingId}:
+
+    parameters:
+      - name: thingId
+        in: path
+        required: true
+        description: The thing's unique identifier.
+        schema:
+          type: string
+
+    get:
+      summary: Get a thing
+      description: Return a single thing by its identifier.
+      operationId: getThing
+      tags: [Things]
+      responses:
+        '200':
+          description: The thing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Thing'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/Problem'
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: A bearer token obtained from your identity provider.
+
+  schemas:
+
+    Thing:
+      type: object
+      description: The resource this API is about. Rename it and give it real fields.
+      required: [id, name, created]
+      properties:
+        id:
+          type: string
+          description: Unique, opaque, stable identifier.
+          example: thg_01HZX
+        name:
+          type: string
+          example: A thing
+        created:
+          type: string
+          format: date-time
+
+    ThingCreate:
+      type: object
+      description: The fields accepted when creating a thing.
+      required: [name]
+      properties:
+        name:
+          type: string
+          example: A thing
+
+    # RFC 9457 Problem Details. Even a starter should error in a standard shape —
+    # it costs nine lines here and saves every consumer writing a bespoke parser.
+    # https://www.rfc-editor.org/rfc/rfc9457
+    Problem:
+      type: object
+      description: >-
+        A problem detail, per RFC 9457. `additionalProperties` is left unset on
+        purpose so problem types can carry extension members.
+      properties:
+        type:
+          type: string
+          format: uri
+          description: A URI reference identifying the problem type.
+        title:
+          type: string
+          description: A short, human-readable summary of the problem type.
+        status:
+          type: integer
+          description: The HTTP status code. A number, never a string.
+        detail:
+          type: string
+          description: A human-readable explanation specific to this occurrence.
+        instance:
+          type: string
+          format: uri-reference
+          description: A URI reference identifying this specific occurrence.
+
+  headers:
+
+    WWW-Authenticate:
+      description: >-
+        The authentication scheme the client should use. RFC 9110 Section 11.6.1
+        requires a 401 to carry a challenge — a problem detail explaining the 401
+        does not substitute for it.
+      schema:
+        type: string
+        example: 'Bearer realm="example", error="invalid_token"'
+
+    Retry-After:
+      description: >-
+        How long to wait before retrying, in seconds. Without it, a 429 leaves the
+        client guessing, which is how retry storms start.
+      schema:
+        type: string
+        example: '120'
+
+  responses:
+
+    Unauthorized:
+      description: Unauthorized. The credential is missing, malformed, or expired.
+      headers:
+        WWW-Authenticate:
+          $ref: '#/components/headers/WWW-Authenticate'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://example.com/errors/unauthorized
+            title: Unauthorized
+            status: 401
+            detail: The access token is missing or expired.
+            instance: /things/thg_01HZX
+
+    TooManyRequests:
+      description: Too Many Requests. You have exceeded the rate limit.
+      headers:
+        Retry-After:
+          $ref: '#/components/headers/Retry-After'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://example.com/errors/too-many-requests
+            title: Too Many Requests
+            status: 429
+            detail: You have exceeded the rate limit for this endpoint.
+            instance: /things/thg_01HZX
+
+    Problem:
+      description: An error, as an RFC 9457 problem detail.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://example.com/errors/not-found
+            title: Not Found
+            status: 404
+            detail: No thing exists with that identifier.
+            instance: /things/thg_01HZX
